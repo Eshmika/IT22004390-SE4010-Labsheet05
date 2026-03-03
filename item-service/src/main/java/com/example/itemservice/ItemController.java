@@ -11,28 +11,44 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/items")
 public class ItemController {
-    private final List<String> items = new ArrayList<>(List.of("Book", "Laptop", "Phone"));
+    private final List<Map<String, Object>> items = new ArrayList<>(List.of(
+            Map.of("id", 1, "name", "Book"),
+            Map.of("id", 2, "name", "Laptop"),
+            Map.of("id", 3, "name", "Phone")
+    ));
+    private int idCounter = 4;
 
     @GetMapping
-    public List<String> getItems() {
+    public List<Map<String, Object>> getItems() {
         return items;
     }
 
     @PostMapping
-    public ResponseEntity<String> addItem(@RequestBody String item) {
+    public ResponseEntity<Map<String, Object>> addItem(@RequestBody Map<String, String> payload) {
+        String name = payload.get("name");
+        if (name == null || name.trim().isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        Map<String, Object> item = Map.of(
+                "id", idCounter++,
+                "name", name.trim()
+        );
         items.add(item);
-        return ResponseEntity.status(HttpStatus.CREATED).body("Item added: " + item);
+        return ResponseEntity.status(HttpStatus.CREATED).body(item);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<String> getItem(@PathVariable int id) {
-        if (id < 0 || id >= items.size()) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(items.get(id));
+    public ResponseEntity<Map<String, Object>> getItem(@PathVariable int id) {
+        return items.stream()
+                .filter(item -> item.get("id").equals(id))
+                .findFirst()
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 }
